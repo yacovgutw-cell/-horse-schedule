@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>לוח שיבוץ סוסים</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;direction:rtl;background:#F0F2F7;color:#1a1a2e;min-height:100vh}
+header{background:#1F3864;color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+header h1{font-size:18px;font-weight:700}
+.header-actions{display:flex;gap:8px;align-items:center}
+.btn{padding:7px 14px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:Arial,sans-serif}
+.btn-light{background:#fff;color:#1F3864}
+.btn-danger{background:#C00000;color:#fff}
+.btn-green{background:#3B6D11;color:#fff}
+.btn-save{background:#4472C4;color:#fff}
+.day-tabs{display:flex;gap:0;background:#fff;border-bottom:2px solid #2F4F8F;padding:0 16px;overflow-x:auto}
+.day-tab{padding:10px 18px;cursor:pointer;font-size:14px;font-weight:600;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all .15s}
+.day-tab.active{color:#1F3864;border-bottom-color:#1F3864}
+.day-tab.has-conflict{color:#C00000}
+.main{display:grid;grid-template-columns:200px 1fr;gap:12px;padding:12px;align-items:start}
+.panel{background:#fff;border-radius:8px;border:0.5px solid #ddd;overflow:hidden}
+.panel-header{background:#1F3864;color:#fff;padding:8px 12px;font-size:13px;font-weight:700}
+.panel-header.red{background:#8B0000}
+.panel-header.amber{background:#633806}
+.reserve-pool{padding:8px;display:flex;flex-direction:column;gap:5px;min-height:80px}
+.reserve-drop-zone{min-height:60px;border:2px dashed #FAC775;border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px}
+.reserve-drop-zone.over{background:#FFF8E6}
+.inst-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;padding:8px}
+.inst-card{border-radius:6px;border:0.5px solid #ddd;background:#fff;overflow:hidden;min-height:110px}
+.inst-card.off{background:#111;border-color:#333}
+.inst-header{background:#2F4F8F;color:#fff;padding:5px 8px;font-size:12px;font-weight:700;text-align:center}
+.inst-card.off .inst-header{background:#1a1a1a;color:#444}
+.inst-body{padding:5px;display:flex;flex-direction:column;gap:4px;min-height:80px}
+.slot{min-height:28px;border-radius:4px;border:1.5px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:11px;color:#aaa;transition:all .12s;background:#fafafa}
+.slot.filled{border:0.5px solid #B5D4F4;background:#E8F0FE;cursor:grab;color:#1F3864;font-weight:700;font-size:12px}
+.slot.filled:active{cursor:grabbing}
+.slot.over{border-color:#4472C4;background:#D0E4FF}
+.slot.dragging{opacity:.35}
+.chip{padding:4px 8px;border-radius:4px;font-size:12px;font-weight:700;background:#E8F0FE;color:#1F3864;border:0.5px solid #B5D4F4;cursor:grab;user-select:none;text-align:center}
+.chip:active{cursor:grabbing}
+.chip.reserve-chip{background:#FFF3CD;color:#633806;border-color:#FAC775}
+.chip.injured{background:#FCEBEB;color:#A32D2D;border-color:#F7C1C1}
+.chip.dragging{opacity:.3}
+.workload-section{padding:8px}
+.wl-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:0.5px solid #f0f0f0}
+.wl-name{width:80px;font-size:12px;font-weight:700;color:#1F3864;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wl-bar-wrap{flex:1;height:10px;background:#F0F2F7;border-radius:5px;overflow:hidden}
+.wl-bar{height:100%;border-radius:5px;transition:width .3s}
+.wl-count{font-size:12px;font-weight:700;min-width:16px;text-align:center}
+.wl-dots{font-size:9px;min-width:60px;color:#888;letter-spacing:1px}
+.conflict-banner{background:#FCEBEB;border:1px solid #F7C1C1;border-radius:6px;padding:7px 12px;font-size:12px;color:#A32D2D;font-weight:600;margin:0 12px 8px}
+.injured-btn{font-size:10px;padding:2px 6px;border-radius:3px;border:0.5px solid #F7C1C1;background:#FCEBEB;color:#A32D2D;cursor:pointer;margin-right:4px}
+.tooltip{font-size:10px;color:#888;margin-top:2px}
+.section-label{font-size:11px;color:#888;padding:4px 8px 2px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:10px;padding:20px;min-width:300px;max-width:420px;direction:rtl}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:12px;color:#1F3864}
+.modal input,.modal select{width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:14px;font-family:Arial;margin-bottom:10px}
+.modal .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.horse-mgmt{padding:10px;max-height:420px;overflow-y:auto}
+.horse-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:.5px solid #f0f0f0}
+.horse-row-name{flex:1;font-size:13px;font-weight:600;color:#1F3864}
+.horse-status{font-size:11px;padding:2px 8px;border-radius:3px;font-weight:600}
+.status-ok{background:#EAF3DE;color:#3B6D11}
+.status-injured{background:#FCEBEB;color:#A32D2D}
+.tab-bar{display:flex;gap:6px;padding:8px 12px 0;border-bottom:.5px solid #ddd;margin-bottom:0}
+.vtab{padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:#888;border-bottom:2px solid transparent;margin-bottom:-1px}
+.vtab.active{color:#1F3864;border-bottom-color:#1F3864}
+.export-area{padding:12px;font-size:12px}
+.export-area textarea{width:100%;height:120px;font-family:monospace;font-size:11px;border:1px solid #ddd;border-radius:4px;padding:6px;direction:ltr}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>&#127863; לוח שיבוץ סוסים</h1>
+  <div class="header-actions">
+    <button class="btn btn-light" onclick="openHorseMgmt()">&#9881; סוסים ומדריכים</button>
+    <button class="btn" style="background:#5B4FCF;color:#fff" onclick="openWeekView()">&#128197; תצוגת שבוע</button>
+    <button class="btn" style="background:#1D9E75;color:#fff" onclick="openInstWeekView(state.instructors[0])">&#128100; תמונה למדריך</button>
+    <button class="btn btn-green" onclick="exportData()">&#8681; ייצוא JSON</button>
+    <button class="btn btn-save" onclick="saveToStorage()">&#128190; שמור</button>
+  </div>
+</header>
+
+<div id="conflictBanner" class="conflict-banner" style="display:none"></div>
+
+<div class="day-tabs" id="dayTabs"></div>
+
+<div class="main">
+  <div>
+    <div class="panel">
+      <div class="panel-header red">&#9888; רזרבה — לא עובדים</div>
+      <div class="reserve-pool">
+        <div class="reserve-drop-zone" id="reserveZone"></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:10px">
+      <div class="panel-header amber">&#128200; עומס עבודה</div>
+      <div class="workload-section" id="workloadSection"></div>
+    </div>
+  </div>
+  <div>
+    <div class="panel">
+      <div class="panel-header">&#128101; מדריכים — <span id="dayLabel"></span></div>
+      <div class="inst-grid" id="instGrid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="weekViewModal" style="align-items:flex-start;padding:0;overflow-y:auto">
+  <div style="background:#F0F2F7;width:100%;min-height:100vh;padding:16px 20px;direction:rtl">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:18px;font-weight:700;color:#1F3864">&#128197; תצוגת שבוע מלא</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-green" onclick="printWeek()">&#128424; הדפסה / PDF</button>
+        <button class="btn" style="background:#5B4FCF;color:#fff" onclick="saveWeekImg()">&#128444; תמונה</button>
+        <button class="btn" style="background:#1D9E75;color:#fff" onclick="closeModal('weekViewModal');openInstWeekView(state.instructors[0])">&#128100; תמונה למדריך</button>
+        <button class="btn btn-light" style="border:1px solid #ccc" onclick="closeModal('weekViewModal')">&#10005; סגור</button>
+      </div>
+    </div>
+    <div id="weekViewContent"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="instWeekModal" style="align-items:flex-start;padding:0;overflow-y:auto">
+  <div style="background:#F0F2F7;width:100%;min-height:100vh;padding:16px 20px;direction:rtl">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:18px;font-weight:700;color:#1F3864">&#128197; שיבוץ שבועי — <span id="instWeekName"></span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="instWeekSelect" onchange="switchInstWeek(this.value)" style="padding:6px 10px;border-radius:6px;border:1px solid #ddd;font-size:13px;font-family:Arial"></select>
+        <button class="btn btn-green" onclick="printInstWeek()">&#128424; הדפסה / PDF</button>
+        <button class="btn" style="background:#5B4FCF;color:#fff" onclick="saveInstWeekImg()">&#128444; תמונה לשליחה</button>
+        <button class="btn btn-light" style="border:1px solid #ccc" onclick="closeModal('instWeekModal')">&#10005; סגור</button>
+      </div>
+    </div>
+    <div id="instWeekContent"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="horseMgmtModal">
+  <div class="modal" style="max-width:500px;width:90%">
+    <h3>&#9881; ניהול סוסים ומדריכים</h3>
+    <div class="tab-bar">
+      <div class="vtab active" onclick="switchVTab('horses',this)">סוסים</div>
+      <div class="vtab" onclick="switchVTab('instructors',this)">מדריכים</div>
+      <div class="vtab" onclick="switchVTab('import',this)">ייבוא/ייצוא</div>
+    </div>
+    <div id="vtab-horses" class="horse-mgmt">
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input id="newHorseName" placeholder="שם סוס חדש" style="flex:1;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:13px">
+        <button class="btn btn-green" onclick="addHorse()">+ הוסף</button>
+      </div>
+      <div id="horseList"></div>
+    </div>
+    <div id="vtab-instructors" style="display:none" class="horse-mgmt">
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <input id="newInstName" placeholder="שם מדריך חדש" style="flex:1;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:13px">
+        <button class="btn btn-green" onclick="addInstructor()">+ הוסף מדריך</button>
+      </div>
+      <div style="font-size:11px;color:#888;margin-bottom:8px;font-weight:600">לחץ על הימים הירוקים לסימון ימי עבודה | לבן = לא עובד</div>
+      <div id="instList"></div>
+    </div>
+    <div id="vtab-import" style="display:none" class="export-area">
+      <div style="font-size:12px;color:#666;margin-bottom:6px">הדבק JSON לייבוא:</div>
+      <textarea id="importArea" placeholder='{"horses":[...],"instructors":[...],...}'></textarea>
+      <button class="btn btn-save" style="margin-top:6px" onclick="importData()">ייבא</button>
+      <div style="font-size:12px;color:#666;margin:10px 0 4px">ייצוא נתונים נוכחיים:</div>
+      <textarea id="exportArea" readonly></textarea>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px">
+      <button class="btn btn-save" onclick="closeModal('horseMgmtModal')">סגור</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DAYS = ['א','ב','ג','ד','ה','ו'];
+const SLOTS = 3;
+
+let state = loadState();
+
+function defaultState() {
+  return {
+    horses: ['הרשיז','ספרטק','לביא','סאן','פנטה','לילה','מוקה','טוני','גוליבר','משי','פפוניטה','גוני','פינט','קאט','באקסטאר','מנטוס','בוטן','קאי','ברוך','ראסטי'],
+    injured: [],
+    instructors: ['דוד','בן וינברגר','דניאל','אורין','רפאל','קרן','עדי','תהילה','רביב'],
+    offDays: {
+      'בן וינברגר':['א','ד','ה','ו'],
+      'קרן':['א','ג','ה','ו'],
+      'תהילה':['א','ב','ה','ו'],
+      'דוד':['ג'],
+      'אורין':['ג'],
+      'דניאל':['ה','ו'],
+      'רפאל':['ד','ה','ו'],
+      'עדי':['ו'],
+      'רביב':['ו']
+    },
+    schedule: {
+      'א':{'דוד':['הרשיז','ספרטק',''],'דניאל':['לילה','מוקה','טוני'],'אורין':['גוליבר','משי','פפוניטה'],'רפאל':['גוני','פנטה',''],'עדי':['פינט','ראסטי',''],'רביב':['מנטוס','בוטן','לביא']},
+      'ב':{'דוד':['הרשיז','ספרטק',''],'בן וינברגר':['לביא','סאן','פנטה'],'דניאל':['לילה','מוקה','טוני'],'אורין':['גוליבר','','פפוניטה'],'רפאל':['ברוך','באקסטאר',''],'קרן':['משי','',''],'עדי':['פינט','ראסטי',''],'רביב':['מנטוס','בוטן','קאי']},
+      'ג':{'בן וינברגר':['לביא','סאן','פנטה'],'דניאל':['לילה','מוקה','טוני'],'רפאל':['ברוך','משי',''],'עדי':['פינט','ראסטי',''],'תהילה':['באקסטאר','',''],'רביב':['מנטוס','בוטן','קאי']},
+      'ד':{'דוד':['הרשיז','ספרטק',''],'דניאל':['לילה','מוקה','טוני'],'אורין':['סאן','גוליבר','פפוניטה'],'קרן':['ברוך','באקסטאר',''],'עדי':['פינט','ראסטי',''],'תהילה':['משי','',''],'רביב':['מנטוס','בוטן','לביא']},
+      'ה':{'דוד':['הרשיז','ספרטק',''],'אורין':['גוליבר','משי','פפוניטה'],'עדי':['פינט','ראסטי',''],'רביב':['מנטוס','בוטן','לביא']},
+      'ו':{'דוד':['הרשיז','ספרטק',''],'אורין':['גוליבר','משי','פפוניטה']}
+    },
+    currentDay: 'א'
+  };
+}
+
+function loadState() {
+  try {
+    const s = localStorage.getItem('horseSchedule');
+    if (s) return JSON.parse(s);
+  } catch(e){}
+  return defaultState();
+}
+
+function saveToStorage() {
+  localStorage.setItem('horseSchedule', JSON.stringify(state));
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = '✓ נשמר!';
+  setTimeout(() => btn.textContent = '💾 שמור', 1500);
+}
+
+let dragHorse = null, dragFromInst = null, dragFromSlot = null, dragFromReserve = false;
+
+function getAssigned(day) {
+  const s = state.schedule[day] || {};
+  const set = new Set();
+  Object.values(s).forEach(slots => { if(slots) slots.forEach(h => { if(h) set.add(h); }); });
+  return set;
+}
+
+function getReserve(day) {
+  const assigned = getAssigned(day);
+  return state.horses.filter(h => !assigned.has(h) && !state.injured.includes(h));
+}
+
+function getDups(day) {
+  const s = state.schedule[day] || {};
+  const seen = {};
+  Object.entries(s).forEach(([inst, slots]) => {
+    if (!slots) return;
+    slots.forEach(h => {
+      if (!h) return;
+      if (!seen[h]) seen[h] = [];
+      seen[h].push(inst);
+    });
+  });
+  return Object.entries(seen).filter(([,v]) => v.length > 1);
+}
+
+function isOff(inst, day) {
+  return (state.offDays[inst] || []).includes(day);
+}
+
+function render() {
+  renderDayTabs();
+  renderInstructors();
+  renderReserve();
+  renderWorkload();
+  renderConflicts();
+}
+
+function renderDayTabs() {
+  const el = document.getElementById('dayTabs');
+  el.innerHTML = '';
+  DAYS.forEach(d => {
+    const t = document.createElement('div');
+    const dups = getDups(d);
+    t.className = 'day-tab' + (d === state.currentDay ? ' active' : '') + (dups.length ? ' has-conflict' : '');
+    t.textContent = 'יום ' + d + (dups.length ? ' ⚠' : '');
+    t.onclick = () => { state.currentDay = d; render(); };
+    el.appendChild(t);
+  });
+  document.getElementById('dayLabel').textContent = 'יום ' + state.currentDay;
+}
+
+function renderReserve() {
+  const zone = document.getElementById('reserveZone');
+  zone.innerHTML = '';
+  const reserve = getReserve(state.currentDay);
+  
+  if (reserve.length === 0) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'font-size:11px;color:#aaa;text-align:center;padding:8px';
+    empty.textContent = 'כל הסוסים משובצים';
+    zone.appendChild(empty);
+  }
+
+  reserve.forEach(horse => {
+    const chip = document.createElement('div');
+    chip.className = 'chip reserve-chip';
+    chip.textContent = horse;
+    chip.draggable = true;
+    chip.ondragstart = e => {
+      dragHorse = horse; dragFromReserve = true; dragFromInst = null;
+      chip.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    };
+    chip.ondragend = () => chip.classList.remove('dragging');
+    zone.appendChild(chip);
+  });
+
+  zone.ondragover = e => { e.preventDefault(); zone.classList.add('over'); };
+  zone.ondragleave = () => zone.classList.remove('over');
+  zone.ondrop = e => {
+    e.preventDefault(); zone.classList.remove('over');
+    if (dragHorse && dragFromInst) {
+      const slots = state.schedule[state.currentDay][dragFromInst];
+      if (slots) {
+        const idx = slots.indexOf(dragHorse);
+        if (idx !== -1) slots[idx] = '';
+      }
+      dragHorse = null; dragFromInst = null; dragFromReserve = false;
+      render(); saveToStorage();
+    }
+  };
+
+  if (state.injured.length > 0) {
+    const lbl = document.createElement('div');
+    lbl.className = 'section-label';
+    lbl.textContent = 'פצועים';
+    const injuredZone = document.createElement('div');
+    injuredZone.style.cssText = 'padding:4px 0;display:flex;flex-direction:column;gap:4px';
+    state.injured.forEach(h => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:4px';
+      const chip = document.createElement('div');
+      chip.className = 'chip injured';
+      chip.style.flex = '1';
+      chip.textContent = h + ' 🩹';
+      const recoverBtn = document.createElement('button');
+      recoverBtn.className = 'injured-btn';
+      recoverBtn.textContent = 'התאושש';
+      recoverBtn.onclick = () => {
+        state.injured = state.injured.filter(x => x !== h);
+        render(); saveToStorage();
+      };
+      row.appendChild(chip); row.appendChild(recoverBtn);
+      injuredZone.appendChild(row);
+    });
+    const panel = document.querySelector('.reserve-pool');
+    panel.appendChild(lbl);
+    panel.appendChild(injuredZone);
+  }
+}
+
+function renderInstructors() {
+  const grid = document.getElementById('instGrid');
+  grid.innerHTML = '';
+  const day = state.currentDay;
+  
+  state.instructors.forEach(inst => {
+    const off = isOff(inst, day);
+    const card = document.createElement('div');
+    card.className = 'inst-card' + (off ? ' off' : '');
+    
+    const hdr = document.createElement('div');
+    hdr.className = 'inst-header';
+    hdr.textContent = inst;
+    
+    const body = document.createElement('div');
+    body.className = 'inst-body';
+    
+    if (off) {
+      const lbl = document.createElement('div');
+      lbl.style.cssText = 'font-size:11px;color:#444;text-align:center;padding:10px 4px';
+      lbl.textContent = 'לא עובד';
+      body.appendChild(lbl);
+    } else {
+      const slots = state.schedule[day] && state.schedule[day][inst] ? [...state.schedule[day][inst]] : [];
+      while (slots.length < SLOTS) slots.push('');
+      slots.push('');
+
+      slots.forEach((horse, slotIdx) => {
+        const slot = document.createElement('div');
+        if (horse) {
+          const isDup = getDups(day).some(([h]) => h === horse);
+          slot.className = 'slot filled' + (isDup ? ' has-conflict' : '');
+          slot.style.borderColor = isDup ? '#E24B4A' : '';
+          slot.style.background = isDup ? '#FCEBEB' : '';
+          slot.style.color = isDup ? '#A32D2D' : '';
+          slot.textContent = horse;
+          slot.draggable = true;
+          slot.ondragstart = e => {
+            dragHorse = horse; dragFromInst = inst; dragFromReserve = false; dragFromSlot = slotIdx;
+            slot.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+          };
+          slot.ondragend = () => slot.classList.remove('dragging');
+          slot.ondblclick = () => {
+            if (confirm('להוציא את ' + horse + ' לרזרבה?')) {
+              const arr = state.schedule[day][inst];
+              const i = arr.indexOf(horse);
+              if (i !== -1) arr[i] = '';
+              render(); saveToStorage();
+            }
+          };
+          slot.title = 'גרור להזזה | דאבל-קליק להוצאה לרזרבה';
+          
+          if (state.injured.includes(horse)) {
+            slot.style.background = '#FCEBEB';
+            slot.style.borderColor = '#F09595';
+            const injBtn = document.createElement('span');
+            injBtn.textContent = ' 🩹';
+            slot.appendChild(injBtn);
+          }
+          
+          const injureBtn = document.createElement('button');
+          injureBtn.className = 'injured-btn';
+          injureBtn.textContent = '🩹';
+          injureBtn.title = 'סמן כפצוע';
+          injureBtn.onclick = e => {
+            e.stopPropagation();
+            injureHorse(horse, inst, day);
+          };
+          slot.appendChild(injureBtn);
+        } else {
+          slot.className = 'slot';
+          slot.textContent = slotIdx < SLOTS ? '+ סוס' : '';
+          if (slotIdx >= SLOTS) slot.style.fontSize = '10px';
+        }
+
+        slot.ondragover = e => { e.preventDefault(); slot.classList.add('over'); };
+        slot.ondragleave = () => slot.classList.remove('over');
+        slot.ondrop = e => {
+          e.preventDefault(); slot.classList.remove('over');
+          if (!dragHorse) return;
+          if (!state.schedule[day]) state.schedule[day] = {};
+          if (!state.schedule[day][inst]) state.schedule[day][inst] = [];
+          
+          if (horse && dragFromInst && dragFromInst !== inst) {
+            const fromArr = state.schedule[day][dragFromInst];
+            const fi = fromArr ? fromArr.indexOf(dragHorse) : -1;
+            if (fi !== -1) { fromArr[fi] = horse; }
+          } else if (horse && dragFromInst === inst) {
+            const arr = state.schedule[day][inst];
+            const fi = arr.indexOf(dragHorse);
+            if (fi !== -1) arr[fi] = horse;
+          } else if (!horse) {
+            if (dragFromInst && dragFromInst !== inst) {
+              const fromArr = state.schedule[day][dragFromInst];
+              const fi = fromArr ? fromArr.indexOf(dragHorse) : -1;
+              if (fi !== -1) fromArr[fi] = '';
+            } else if (dragFromInst === inst) {
+              const arr = state.schedule[day][inst];
+              const fi = arr.indexOf(dragHorse);
+              if (fi !== -1) arr[fi] = '';
+            }
+            const arr = state.schedule[day][inst];
+            const ei = arr.indexOf('');
+            if (ei !== -1) arr[ei] = dragHorse;
+            else arr.push(dragHorse);
+          }
+
+          dragHorse = null; dragFromInst = null; dragFromSlot = null; dragFromReserve = false;
+          cleanSlots(day, inst);
+          render(); saveToStorage();
+        };
+
+        body.appendChild(slot);
+      });
+    }
+
+    card.appendChild(hdr); card.appendChild(body);
+    grid.appendChild(card);
+  });
+}
+
+function injureHorse(horse, inst, day) {
+  if (!confirm('לסמן את ' + horse + ' כפצוע ולהוציא מכל השיבוצים של היום?')) return;
+  if (!state.injured.includes(horse)) state.injured.push(horse);
+  DAYS.forEach(d => {
+    Object.values(state.schedule[d] || {}).forEach(slots => {
+      if (!slots) return;
+      const i = slots.indexOf(horse);
+      if (i !== -1) slots[i] = '';
+    });
+  });
+  render(); saveToStorage();
+}
+
+function cleanSlots(day, inst) {
+  if (!state.schedule[day] || !state.schedule[day][inst]) return;
+  const arr = state.schedule[day][inst];
+  const filled = arr.filter(h => h);
+  const clean = [...filled];
+  while (clean.length < SLOTS) clean.push('');
+  state.schedule[day][inst] = clean;
+}
+
+function renderWorkload() {
+  const el = document.getElementById('workloadSection');
+  el.innerHTML = '';
+  const maxDays = DAYS.length;
+  
+  state.horses.forEach(horse => {
+    let count = 0;
+    const workedDays = [];
+    DAYS.forEach(d => {
+      const assigned = getAssigned(d);
+      if (assigned.has(horse)) { count++; workedDays.push(d); }
+    });
+    
+    const row = document.createElement('div');
+    row.className = 'wl-row';
+    
+    const injured = state.injured.includes(horse);
+    const color = injured ? '#A32D2D' : count >= 5 ? '#C00000' : count >= 3 ? '#BA7517' : '#3B6D11';
+    const bgColor = injured ? '#F09595' : count >= 5 ? '#C00000' : count >= 3 ? '#EF9F27' : '#70AD47';
+    
+    row.innerHTML = `
+      <div class="wl-name" title="${horse}">${horse}${injured ? ' 🩹' : ''}</div>
+      <div class="wl-bar-wrap"><div class="wl-bar" style="width:${Math.round(count/maxDays*100)}%;background:${bgColor}"></div></div>
+      <div class="wl-count" style="color:${color}">${count}</div>
+      <div class="wl-dots">${DAYS.map(d => workedDays.includes(d) ? '<span style="color:'+color+'">●</span>' : '<span style="color:#ddd">○</span>').join('')}</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function renderConflicts() {
+  const banner = document.getElementById('conflictBanner');
+  const dups = getDups(state.currentDay);
+  if (dups.length) {
+    banner.style.display = 'block';
+    banner.textContent = '⚠️ כפילות ביום ' + state.currentDay + ': ' + dups.map(([h,i]) => h + ' → ' + i.join(' + ')).join(' | ');
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function openHorseMgmt() {
+  renderHorseList();
+  renderInstList();
+  document.getElementById('exportArea').value = JSON.stringify(state, null, 2);
+  document.getElementById('horseMgmtModal').classList.add('show');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function switchVTab(name, el) {
+  document.querySelectorAll('.vtab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  ['horses','instructors','import'].forEach(t => {
+    document.getElementById('vtab-' + t).style.display = t === name ? 'block' : 'none';
+  });
+  if (name === 'import') document.getElementById('exportArea').value = JSON.stringify(state, null, 2);
+}
+
+function renderHorseList() {
+  const el = document.getElementById('horseList');
+  el.innerHTML = '';
+  state.horses.forEach((h, idx) => {
+    const row = document.createElement('div');
+    row.className = 'horse-row';
+    const injured = state.injured.includes(h);
+    row.innerHTML = `
+      <div class="horse-row-name">${h}</div>
+      <span class="horse-status ${injured ? 'status-injured' : 'status-ok'}">${injured ? 'פצוע 🩹' : 'תקין'}</span>
+      <button class="injured-btn" onclick="${injured ? 'recoverHorse' : 'markInjured'}('${h}')">${injured ? 'התאושש' : '🩹 פצע'}</button>
+      <button class="injured-btn" style="background:#FCEBEB;color:#A32D2D" onclick="removeHorse('${h}')">מחק</button>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function renderInstList() {
+  const el = document.getElementById('instList');
+  el.innerHTML = '';
+  state.instructors.forEach(inst => {
+    const offList = state.offDays[inst] || [];
+    const workDays = DAYS.filter(d => !offList.includes(d));
+    const card = document.createElement('div');
+    card.style.cssText = 'margin-bottom:12px;padding:10px;border:0.5px solid #ddd;border-radius:8px;background:#fafafa';
+
+    const topRow = document.createElement('div');
+    topRow.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:8px';
+
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = 'font-size:14px;font-weight:700;color:#1F3864';
+    nameEl.textContent = inst;
+
+    const rightSide = document.createElement('div');
+    rightSide.style.cssText = 'display:flex;align-items:center;gap:6px';
+
+    const countBadge = document.createElement('span');
+    countBadge.style.cssText = 'font-size:11px;background:#E8F0FE;color:#1F3864;padding:2px 8px;border-radius:10px;font-weight:600';
+    countBadge.textContent = workDays.length + ' ימי עבודה';
+    countBadge.id = 'badge_' + inst.replace(/\s/g,'_');
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'injured-btn';
+    delBtn.style.cssText = 'background:#FCEBEB;color:#A32D2D;border-color:#F7C1C1';
+    delBtn.textContent = 'מחק';
+    delBtn.onclick = () => removeInst(inst);
+
+    rightSide.appendChild(countBadge);
+    rightSide.appendChild(delBtn);
+    topRow.appendChild(nameEl);
+    topRow.appendChild(rightSide);
+
+    const daysRow = document.createElement('div');
+    daysRow.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap';
+
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:11px;color:#888;margin-bottom:4px';
+    label.textContent = 'ימי עבודה (לחץ להחלפה):';
+
+    DAYS.forEach(d => {
+      const isWork = !offList.includes(d);
+      const btn = document.createElement('button');
+      btn.id = 'daybtn_' + inst.replace(/\s/g,'_') + '_' + d;
+      btn.style.cssText = `padding:5px 12px;border-radius:5px;border:1.5px solid ${isWork ? '#3B6D11' : '#ddd'};background:${isWork ? '#EAF3DE' : '#fff'};color:${isWork ? '#3B6D11' : '#aaa'};cursor:pointer;font-weight:700;font-size:13px;font-family:Arial;transition:all .12s`;
+      btn.textContent = 'יום ' + d;
+      btn.onclick = () => {
+        if (!state.offDays[inst]) state.offDays[inst] = [];
+        const i = state.offDays[inst].indexOf(d);
+        if (i === -1) state.offDays[inst].push(d);
+        else state.offDays[inst].splice(i, 1);
+        renderInstList(); render(); saveToStorage();
+      };
+      daysRow.appendChild(btn);
+    });
+
+    card.appendChild(topRow);
+    card.appendChild(label);
+    card.appendChild(daysRow);
+    el.appendChild(card);
+  });
+}
+
+function renderOffDays() { renderInstList(); }
+
+function addHorse() {
+  const inp = document.getElementById('newHorseName');
+  const name = inp.value.trim();
+  if (!name || state.horses.includes(name)) return;
+  state.horses.push(name);
+  inp.value = '';
+  renderHorseList(); render(); saveToStorage();
+}
+
+function removeHorse(h) {
+  if (!confirm('למחוק את ' + h + '?')) return;
+  state.horses = state.horses.filter(x => x !== h);
+  state.injured = state.injured.filter(x => x !== h);
+  DAYS.forEach(d => {
+    Object.values(state.schedule[d] || {}).forEach(slots => {
+      if (!slots) return;
+      const i = slots.indexOf(h);
+      if (i !== -1) slots[i] = '';
+    });
+  });
+  renderHorseList(); render(); saveToStorage();
+}
+
+function markInjured(h) {
+  if (!state.injured.includes(h)) state.injured.push(h);
+  DAYS.forEach(d => {
+    Object.values(state.schedule[d] || {}).forEach(slots => {
+      if (!slots) return;
+      const i = slots.indexOf(h);
+      if (i !== -1) slots[i] = '';
+    });
+  });
+  renderHorseList(); render(); saveToStorage();
+}
+
+function recoverHorse(h) {
+  state.injured = state.injured.filter(x => x !== h);
+  renderHorseList(); render(); saveToStorage();
+}
+
+function addInstructor() {
+  const inp = document.getElementById('newInstName');
+  const name = inp.value.trim();
+  if (!name || state.instructors.includes(name)) return;
+  state.instructors.push(name);
+  inp.value = '';
+  renderInstList(); render(); saveToStorage();
+}
+
+function removeInst(inst) {
+  if (!confirm('למחוק את ' + inst + '?')) return;
+  state.instructors = state.instructors.filter(x => x !== inst);
+  DAYS.forEach(d => { if (state.schedule[d]) delete state.schedule[d][inst]; });
+  renderInstList(); render(); saveToStorage();
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'שיבוץ_סוסים_' + new Date().toLocaleDateString('he-IL').replace(/\//g,'-') + '.json';
+  a.click();
+}
+
+function importData() {
+  try {
+    const data = JSON.parse(document.getElementById('importArea').value);
+    if (!data.horses || !data.instructors || !data.schedule) throw new Error('מבנה לא תקין');
+    state = {...defaultState(), ...data};
+    closeModal('horseMgmtModal');
+    render(); saveToStorage();
+    alert('יובא בהצלחה!');
+  } catch(e) {
+    alert('שגיאה בייבוא: ' + e.message);
+  }
+}
+
+
+function openWeekView() {
+  renderWeekView();
+  document.getElementById('weekViewModal').classList.add('show');
+}
+
+function renderWeekView() {
+  const el = document.getElementById('weekViewContent');
+  const days = ['א','ב','ג','ד','ה','ו'];
+  
+  let html = '<div id="weekPrintArea" style="background:#fff;border-radius:10px;padding:16px;direction:rtl">';
+  html += '<div style="text-align:center;font-size:20px;font-weight:700;color:#1F3864;margin-bottom:14px;border-bottom:3px solid #1F3864;padding-bottom:8px">&#127863; לוח שיבוץ סוסים — שבועי</div>';
+  
+  // Big schedule table
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:18px">';
+  // Header row - instructors
+  html += '<tr><th style="background:#1F3864;color:#fff;padding:7px 6px;border:1px solid #2F4F8F;min-width:50px">יום</th>';
+  html += '<th style="background:#8B0000;color:#fff;padding:7px 6px;border:1px solid #8B0000;min-width:100px">רזרבה</th>';
+  state.instructors.forEach(inst => {
+    html += `<th style="background:#2F4F8F;color:#fff;padding:7px 6px;border:1px solid #1F3864;min-width:80px">${inst}</th>`;
+  });
+  html += '</tr>';
+  
+  days.forEach(day => {
+    const sched = state.schedule[day] || {};
+    const assigned = getAssigned(day);
+    const reserve = state.horses.filter(h => !assigned.has(h) && !state.injured.includes(h));
+    const dups = getDups(day);
+    const dupHorses = new Set(dups.map(([h]) => h));
+    const offList = [];
+    state.instructors.forEach(inst => { if(isOff(inst, day)) offList.push(inst); });
+    
+    // 3 sub-rows per day
+    for (let slot = 0; slot < 3; slot++) {
+      html += '<tr>';
+      if (slot === 0) {
+        html += `<td rowspan="3" style="background:#4472C4;color:#fff;font-size:18px;font-weight:700;text-align:center;padding:8px;border:1px solid #2F4F8F;vertical-align:middle">${day}</td>`;
+        // Reserve cell - rowspan 3
+        const reserveText = reserve.join(' | ') || '—';
+        html += `<td rowspan="3" style="background:#FFF3CD;color:#7F5000;padding:6px;border:1px solid #FAC775;vertical-align:top;font-size:11px;font-weight:600">${reserveText}</td>`;
+      }
+      state.instructors.forEach(inst => {
+        if (slot === 0 && isOff(inst, day)) {
+          html += `<td rowspan="3" style="background:#111;border:1px solid #333;text-align:center;color:#444;font-size:10px;vertical-align:middle">לא עובד</td>`;
+          return;
+        }
+        if (isOff(inst, day)) return;
+        const slots = sched[inst] || [];
+        const horse = slots[slot] || '';
+        const isDup = horse && dupHorses.has(horse);
+        const isInj = horse && state.injured.includes(horse);
+        let bg = slot === 0 ? '#fff' : slot === 1 ? '#F0F4FF' : '#E8F0FE';
+        let color = '#1F3864';
+        if (isDup) { bg = '#FCEBEB'; color = '#A32D2D'; }
+        if (isInj) { bg = '#FCEBEB'; color = '#A32D2D'; }
+        if (!horse) { bg = '#fafafa'; color = '#ccc'; }
+        html += `<td style="background:${bg};color:${color};padding:5px 6px;border:0.5px solid #ddd;font-weight:${horse ? '700' : '400'};font-size:12px;text-align:center">${horse || (slot===0 ? '·' : '')}</td>`;
+      });
+      html += '</tr>';
+    }
+    // Thick bottom border row
+    html += `<tr><td colspan="${state.instructors.length + 2}" style="padding:0;border-bottom:2px solid #2F4F8F;border-top:0;border-left:0;border-right:0"></td></tr>`;
+  });
+  html += '</table>';
+  
+  // Injured horses
+  if (state.injured.length > 0) {
+    html += `<div style="background:#FCEBEB;border:1px solid #F7C1C1;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:#A32D2D;font-weight:700">&#129657; סוסים פצועים: ${state.injured.join(' | ')}</div>`;
+  }
+  
+  // Workload table
+  html += '<div style="font-size:14px;font-weight:700;color:#1F3864;margin-bottom:8px">&#128200; עומס עבודה שבועי</div>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<tr><th style="background:#1F3864;color:#fff;padding:6px;border:1px solid #2F4F8F">סוס</th>';
+  days.forEach(d => { html += `<th style="background:#2F4F8F;color:#fff;padding:6px;border:1px solid #1F3864;text-align:center">יום ${d}</th>`; });
+  html += '<th style="background:#1F3864;color:#fff;padding:6px;border:1px solid #2F4F8F;text-align:center">סה"כ</th></tr>';
+  
+  state.horses.forEach((horse, hi) => {
+    const workedDays = [];
+    days.forEach(d => { if(getAssigned(d).has(horse)) workedDays.push(d); });
+    const total = workedDays.length;
+    const injured = state.injured.includes(horse);
+    const countColor = injured ? '#A32D2D' : total >= 5 ? '#C00000' : total >= 3 ? '#BA7517' : '#3B6D11';
+    const rowBg = hi % 2 === 0 ? '#fff' : '#F7F9FF';
+    html += `<tr><td style="background:${injured ? '#FCEBEB' : rowBg};color:${injured ? '#A32D2D' : '#1F3864'};font-weight:700;padding:5px 8px;border:0.5px solid #ddd">${horse}${injured ? ' 🩹' : ''}</td>`;
+    days.forEach(d => {
+      const worked = workedDays.includes(d);
+      html += `<td style="background:${worked ? '#EAF3DE' : rowBg};color:${worked ? '#3B6D11' : '#ccc'};text-align:center;padding:5px;border:0.5px solid #ddd;font-weight:700">${worked ? '✓' : '—'}</td>`;
+    });
+    html += `<td style="background:${injured ? '#FCEBEB' : rowBg};color:${countColor};font-weight:700;text-align:center;padding:5px;border:0.5px solid #ddd">${total}</td></tr>`;
+  });
+  html += '</table>';
+  html += '<div style="text-align:center;font-size:10px;color:#aaa;margin-top:12px">הופק: ' + new Date().toLocaleDateString("he-IL") + '</div>';
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function printWeek() {
+  const content = document.getElementById('weekPrintArea').innerHTML;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>שיבוץ סוסים</title><style>body{font-family:Arial,sans-serif;direction:rtl;margin:16px}table{border-collapse:collapse}@media print{body{margin:0}}</style></head><body>${content}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 500);
+}
+
+function saveWeekImg() {
+  const el = document.getElementById('weekPrintArea');
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+  script.onload = () => {
+    html2canvas(el, {scale:2, useCORS:true, backgroundColor:'#ffffff'}).then(canvas => {
+      const a = document.createElement('a');
+      a.download = 'שיבוץ_שבועי_' + new Date().toLocaleDateString('he-IL').replace(/\//g,'-') + '.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    });
+  };
+  document.head.appendChild(script);
+}
+
+
+function openInstWeekView(inst) {
+  const sel = document.getElementById('instWeekSelect');
+  sel.innerHTML = '';
+  state.instructors.forEach(i => {
+    const opt = document.createElement('option');
+    opt.value = i; opt.textContent = i;
+    if (i === inst) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  renderInstWeek(inst);
+  document.getElementById('instWeekModal').classList.add('show');
+}
+
+function switchInstWeek(inst) {
+  renderInstWeek(inst);
+}
+
+function renderInstWeek(inst) {
+  document.getElementById('instWeekName').textContent = inst;
+  const el = document.getElementById('instWeekContent');
+  const days = ['א','ב','ג','ד','ה','ו'];
+  const date = new Date().toLocaleDateString('he-IL');
+
+  let html = `<div id="instPrintArea" style="background:#fff;padding:16px;direction:rtl;max-width:380px;margin:0 auto;font-family:Arial,sans-serif">`;
+
+  // Simple clean header
+  html += `<div style="border-bottom:2px solid #222;padding-bottom:8px;margin-bottom:12px">`;
+  html += `<div style="font-size:18px;font-weight:700;color:#000">${inst}</div>`;
+  html += `<div style="font-size:12px;color:#666">שיבוץ שבועי — ${date}</div>`;
+  html += `</div>`;
+
+  days.forEach(day => {
+    const off = isOff(inst, day);
+    const sched = state.schedule[day] || {};
+    const horses = (sched[inst] || []).filter(h => h);
+    if (off) return; // skip days off entirely - cleaner
+
+    html += `<div style="margin-bottom:10px;display:flex;align-items:flex-start;gap:10px">`;
+    html += `<div style="font-size:16px;font-weight:700;color:#000;min-width:36px;padding-top:1px">יום ${day}</div>`;
+    html += `<div style="flex:1;border-right:2px solid #ddd;padding-right:10px">`;
+    if (horses.length === 0) {
+      html += `<span style="color:#bbb;font-size:13px">—</span>`;
+    } else {
+      html += horses.map((h,i) => {
+        const inj = state.injured.includes(h);
+        return `<span style="display:inline-block;margin:2px 3px 2px 0;font-size:14px;font-weight:700;color:${inj ? '#C00000' : '#000'}">${h}${inj ? ' 🩹' : ''}${i < horses.length-1 ? ' ·' : ''}</span>`;
+      }).join('');
+    }
+    html += `</div></div>`;
+  });
+
+  html += `<div style="border-top:1px solid #ddd;margin-top:4px;padding-top:6px;font-size:11px;color:#aaa;text-align:center">${date}</div>`;
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+function printInstWeek() {
+  const inst = document.getElementById('instWeekName').textContent;
+  const content = document.getElementById('instPrintArea').innerHTML;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>שיבוץ ${inst}</title><style>body{font-family:Arial,sans-serif;direction:rtl;margin:20px;background:#fff}@media print{body{margin:0}}</style></head><body>${content}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 500);
+}
+
+function saveInstWeekImg() {
+  const inst = document.getElementById('instWeekName').textContent;
+  const el = document.getElementById('instPrintArea');
+  if (window.html2canvas) {
+    html2canvas(el, {scale:2, useCORS:true, backgroundColor:'#ffffff'}).then(canvas => {
+      const a = document.createElement('a');
+      a.download = 'שיבוץ_' + inst + '_' + new Date().toLocaleDateString('he-IL').replace(/\//g,'-') + '.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    });
+    return;
+  }
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+  script.onload = () => {
+    html2canvas(el, {scale:2, useCORS:true, backgroundColor:'#ffffff'}).then(canvas => {
+      const a = document.createElement('a');
+      a.download = 'שיבוץ_' + inst + '_' + new Date().toLocaleDateString('he-IL').replace(/\//g,'-') + '.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    });
+  };
+  document.head.appendChild(script);
+}
+
+document.getElementById('newHorseName').addEventListener('keydown', e => { if(e.key==='Enter') addHorse(); });
+document.getElementById('newInstName').addEventListener('keydown', e => { if(e.key==='Enter') addInstructor(); });
+document.getElementById('horseMgmtModal').addEventListener('click', e => { if(e.target === document.getElementById('horseMgmtModal')) closeModal('horseMgmtModal'); });
+
+render();
+</script>
+</body>
+</html>
